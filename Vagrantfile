@@ -14,9 +14,16 @@ Vagrant.configure("2") do |config|
         master.vm.network "private_network", ip: "192.168.56.10"
         master.vm.hostname = "k8s-master"
         master.vm.provision "ansible" do |ansible|
-            ansible.playbook = "provisioning/common-setup.yml"
+            ansible.playbook = "provisioning/common/common-setup.yml"
+        end
+        master.vm.provision "ansible" do |ansible|
+            ansible.playbook = "provisioning/masters/master-setup.yml"
             ansible.extra_vars = {
                 node_ip: "192.168.56.10",
+                user: "vagrant",
+                calico_version: "v3.27.0",
+                calico_cidr: "192.168.0.0/16",
+                calico_cidr_vm: "192.168.56.0/17",
             }
         end
     end
@@ -27,10 +34,10 @@ Vagrant.configure("2") do |config|
             node.vm.network "private_network", ip: "192.168.56.#{i + 10}"
             node.vm.hostname = "node-#{i}"
             node.vm.provision "ansible" do |ansible|
-                ansible.playbook = "provisioning/common-setup.yml"
-                ansible.extra_vars = {
-                    node_ip: "192.168.56.#{i + 10}",
-                }
+                ansible.playbook = "provisioning/common/common-setup.yml"
+            end
+            node.vm.provision "ansible" do |ansible|
+                ansible.playbook = "provisioning/workers/worker-setup.yml"
             end
         end
     end
