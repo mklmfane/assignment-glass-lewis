@@ -19,18 +19,18 @@
   - name: Save output file from master
     copy:
       content: "{{ output.stdout }}"
-      dest: ../join/kube-output.txt
+      dest: /tmp/kube-output.txt
   
   - name: Copy join command to local file
     fetch:
       src: /tmp/kube-output.txt
-      dest: ../join/kube-output.txt
+      dest: ./join/kube-output.txt
       flat: yes
   
   - name: Save admin.conf to local file
     fetch:
       src: /etc/kubernetes/admin.conf
-      dest: ../join/admin.conf
+      dest: ./join/admin.conf
       flat: yes
 
 #  - name: Creates kubeconfig directory

@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
             ansible.playbook = "provisioning/common/common-setup.yml"
         end
         master.vm.provision "ansible" do |ansible|
-            ansible.playbook = "provisioning/masters/master-setup.yml"
+            ansible.playbook = "provisioning/master-setup.yml"
             ansible.extra_vars = {
                 node_ip: "192.168.56.10",
                 user: "vagrant",
@@ -37,7 +37,7 @@ Vagrant.configure("2") do |config|
                 ansible.playbook = "provisioning/common/common-setup.yml"
             end
             node.vm.provision "ansible" do |ansible|
-                ansible.playbook = "provisioning/workers/worker-setup.yml"
+                ansible.playbook = "provisioning/worker-setup.yml"
             end
         end
     end
