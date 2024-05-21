@@ -1,0 +1,17 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Copy join token to node
+    copy:
+      src: ./join/kube-output.txt
+      dest: /tmp/kube-output.txt
+      owner: root
+      group: root
+      mode: "0777"
+
+  - name: Extract worker token
+    shell: tail -n2 /tmp/kube-output.txt > /tmp/join-worker-command.sh
+
+  - name: Add kubernetes node into the cluster
+    command: sh /tmp/join-worker-command.sh
