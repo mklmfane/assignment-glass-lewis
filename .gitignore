@@ -29,5 +29,8 @@
 .terraform/providers/registry.terraform.io/hashicorp/helm/2.13.2/linux_amd64/terraform-provider-helm_v2.13.2_x5
 .terraform/providers/registry.terraform.io/hashicorp/kubernetes/2.30.0/linux_amd64/LICENSE.txt
 .terraform/providers/registry.terraform.io/hashicorp/kubernetes/2.30.0/linux_amd64/terraform-provider-kubernetes_v2.30.0_x5
-provisioning/join/admin.conf
-provisioning/join/kube-output.txt
+VM_provisioning/_cluster_k8s_info/admin.conf
+VM_provisioning/_cluster_k8s_info/join-worker-command.sh
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
