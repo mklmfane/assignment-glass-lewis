@@ -11,19 +11,22 @@ Vagrant.configure("2") do |config|
       
     config.vm.define "k8s-master" do |master|
         master.vm.box = IMAGE_NAME
-        master.vm.network "private_network", ip: "192.168.56.10"
+        master.vm.network "private_network", ip: "192.168.56.2"
         master.vm.hostname = "k8s-master"
         master.vm.provision "ansible" do |ansible|
             ansible.playbook = "provisioning/common/common-setup.yml"
+            ansible.extra_vars = {
+                    node_ip: "192.168.56.2",
+                }
         end
         master.vm.provision "ansible" do |ansible|
             ansible.playbook = "provisioning/master-setup.yml"
             ansible.extra_vars = {
-                node_ip: "192.168.56.10",
+                node_ip: "192.168.56.2",
                 user: "vagrant",
                 calico_version: "v3.27.0",
-                calico_cidr: "192.168.0.0/16",
-                calico_cidr_vm: "192.168.56.0/17",
+                calico_cidr: "10.100.0.0/16",
+                calico_cidr_vm: "192.168.56.0/24",
             }
         end
     end
@@ -31,10 +34,13 @@ Vagrant.configure("2") do |config|
     (1..N).each do |i|
         config.vm.define "node-#{i}" do |node|
             node.vm.box = IMAGE_NAME
-            node.vm.network "private_network", ip: "192.168.56.#{i + 10}"
+            node.vm.network "private_network", ip: "192.168.56.#{i + 2}"
             node.vm.hostname = "node-#{i}"
             node.vm.provision "ansible" do |ansible|
                 ansible.playbook = "provisioning/common/common-setup.yml"
+                ansible.extra_vars = {
+                    node_ip: "192.168.56.#{i + 2}",
+                }
             end
             node.vm.provision "ansible" do |ansible|
                 ansible.playbook = "provisioning/worker-setup.yml"
