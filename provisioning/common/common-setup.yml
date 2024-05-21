@@ -109,7 +109,14 @@
       state: latest
       update_cache: true
     #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+
+  - name: Configure node ip
+    lineinfile:
+      path: /etc/sysconfig/kubelet
+      create: yes
+      line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
+      state: present
+
   - name: Start Kubelet
     service:
       name: kubelet
