@@ -5,16 +5,14 @@
   - name: disable SELinux on reboot
     selinux:
       state: disabled
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Remove podman runc
     yum:
       name:
         - runc
         - podman
       state: absent
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Update repository cache
     yum:
       update_cache: true
@@ -23,15 +21,13 @@
     yum:
       name: firewalld
       state: present
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Disable firewall service for labs
     service:
       name: firewalld
       state: stopped
       enabled: false
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Enable kernel module
     copy:
       src: files/module-k8s.conf
@@ -62,19 +58,16 @@
         - iproute-tc
       state: present
       update_cache: true
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Add Docker repository
     shell: dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Install containerd
     yum:
       name: containerd.io
       state: present
       update_cache: true
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-  
+    
   - name: Backup containerd config.toml
     command: mv /etc/containerd/config.toml /etc/containerd/config.toml.orig
   
