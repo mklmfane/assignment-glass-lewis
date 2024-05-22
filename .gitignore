@@ -34,3 +34,4 @@ VM_provisioning/_cluster_k8s_info/join-worker-command.sh
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
+.terraform/providers/registry.terraform.io/hashicorp/local/2.5.1/linux_amd64/terraform-provider-local_v2.5.1_x5
