@@ -1,5 +1,9 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            inheritFrom 'linting'
+        }
+    }
 
     stages {
         stage('Checkout') {
@@ -10,16 +14,20 @@ pipeline {
 
         stage('Lint Terraform') {
             steps {
+                container('terraform') {
                 sh 'terraform fmt -check'
                 sh 'tfsec check'
                 sh 'tflint'
+                }
             }
         }
 
         stage('Lint Ansible') {
             steps {
+                container('ansible') {
                 sh 'ansible-lint'
                 sh 'yamllint'
+                }
             }
         }
     }
