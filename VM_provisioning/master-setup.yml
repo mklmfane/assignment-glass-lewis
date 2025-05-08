@@ -16,6 +16,23 @@
     # kubeadm init --pod-network-cidr=192.168.128.0/17
     register: output
   
+  - name: Create .kube directory for vagrant user
+    file:
+      path: /home/vagrant/.kube
+      state: directory
+      owner: vagrant
+      group: vagrant
+      mode: '0755'
+
+  - name: Copy admin.conf to vagrant user kube config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/vagrant/.kube/config
+      remote_src: yes
+      owner: vagrant
+      group: vagrant
+      mode: '0644'
+
   - name: Save output file from master
     copy:
       content: "{{ output.stdout }}"
@@ -35,3 +52,9 @@
       src: /etc/kubernetes/admin.conf
       dest: ./_cluster_k8s_info/admin.conf
       flat: yes
+
+  - name: Install Calico CNI
+    become: false
+    become_user: vagrant
+    shell: |
+      kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml
