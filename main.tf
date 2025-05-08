@@ -48,6 +48,21 @@ resource "null_resource" "vagrant_cluster_and_k8s_wait" {
     working_dir = "${path.module}"
   }
 
+}
+
+resource "null_resource" "nginx_ingress_static" {
+  provisioner "local-exec" {
+    command = <<EOT
+      kubectl --kubeconfig=./VM_provisioning/_cluster_k8s_info/admin.conf apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/baremetal/deploy.yaml
+    EOT
+  }
+
+  depends_on = [null_resource.vagrant_cluster_and_k8s_wait]
+}
+
+
+# This resource is used to destroy the Vagrant cluster when the Terraform destroy command is executed.
+resource "null_resource" "vagrant_cluster_destroy" {
   provisioner "local-exec" {
     when        = destroy
     command     = "vagrant destroy -f"

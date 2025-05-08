@@ -1,2 +1,2 @@
-kubeadm join 192.168.56.2:6443 --token ikn8dv.g5zvwtodb9l1rkao \
-	--discovery-token-ca-cert-hash sha256:e162ef0965f2bd10f6f731150240dd6ecd921db852dcdedbad2a7b4b47864769 
+kubeadm join 192.168.56.2:6443 --token katf50.fc9h7pjlzi06x5m9 \
+	--discovery-token-ca-cert-hash sha256:00536db2d27dd2a49c814e0003b324d875315ee5e33b1ddee5510e4e428c835e 
