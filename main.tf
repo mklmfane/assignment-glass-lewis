@@ -26,5 +26,28 @@ resource "null_resource" "wait_for_k8s" {
   depends_on = [null_resource.vagrant_cluster]
 }
 
+resource "null_resource" "vagrant_cluster_and_k8s_wait" {
+  provisioner "local-exec" {
+    command     = <<EOT
+      echo "🚀 Launching Vagrant cluster..."
+      vagrant up
+      echo "⏳ Waiting for Kubernetes API and nodes to become ready..."
+      ${path.module}/wait-for-k8s-ready.sh
+    EOT
+    working_dir = "${path.module}"
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    command     = "vagrant destroy -f"
+    working_dir = "${path.module}"
+  }
+
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+}
+
+
 
 
