@@ -2,7 +2,8 @@ pipeline {
   agent any
 
   environment {
-    KUBECONFIG = '~/.kube/config'
+    // Use default kubeconfig path that Terraform copies to
+    KUBECONFIG = "${HOME}/.kube/config"
   }
 
   stages {
@@ -21,7 +22,7 @@ pipeline {
           echo "== Top-Level Contents =="
           ls -l
 
-          echo "== Recursively searching for .tf files =="
+          echo "== Searching for .tf files =="
           find . -type f -name "*.tf" || true
         '''
         sh 'terraform init -no-color'
@@ -43,13 +44,18 @@ pipeline {
     stage('Verify Kubernetes Nodes') {
       steps {
         sh '''
-          echo "Using kubeconfig: $KUBECONFIG"
-          if [ -f "$KUBECONFIG" ]; then
-            kubectl get nodes
-          else
-            echo "Kubeconfig not found at $KUBECONFIG"
+          echo "Using kubeconfig at: $KUBECONFIG"
+          
+          if [ ! -f "$KUBECONFIG" ]; then
+            echo "❌ Kubeconfig not found at $KUBECONFIG"
             exit 1
           fi
+
+          chmod 600 "$KUBECONFIG"
+          echo "✅ kubeconfig permissions set"
+
+          echo "✅ Listing nodes:"
+          kubectl get nodes
         '''
       }
     }
@@ -57,12 +63,12 @@ pipeline {
 
   post {
     always {
-      echo "Pipeline complete."
+      echo "✅ Pipeline complete."
     }
     failure {
-      echo "Cleaning up on failure..."
+      echo "❌ Pipeline failed. Cleaning up..."
       dir('jenkins-vm') {
-        sh 'terraform destroy -auto-approve -no-color'
+        sh 'terraform destroy -auto-approve -no-color || true'
       }
     }
   }
