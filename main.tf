@@ -1,13 +1,3 @@
-terraform {
-  required_version = ">= 0.12.0"
-
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "3.2.4"
-    }
-  }
-}
 
 # Launch the Vagrant-based Kubernetes cluster
 resource "null_resource" "vagrant_cluster" {
