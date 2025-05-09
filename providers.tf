@@ -16,20 +16,20 @@ terraform {
       source  = "hashicorp/helm"
       version = ">= 2.12.1"
     }
+
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.29.0"
     }
-  }
-}
+    
+    kind = {
+      source  = "tehcyx/kind"
+      version = "0.2.1"
+    }
 
-provider "kubernetes" {
-  config_context_cluster = "kubernetes"
-  config_path = "./VM_provisioning/_cluster_k8s_info/admin.conf"
-}
-
-provider "helm" {
-  kubernetes {
-    config_path = "./VM_provisioning/_cluster_k8s_info/admin.conf"
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "3.0.2"
+    }
   }
 }

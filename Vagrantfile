@@ -1,54 +1,143 @@
-IMAGE_NAME = "almalinux/9"
-N = 2
-
 Vagrant.configure("2") do |config|
-    config.ssh.insert_key = false
+  config.vm.define "jenkins" do |jenkins|
+    jenkins.vm.box = "generic/ubuntu2204"
+    jenkins.vm.boot_timeout = 180
 
-    config.vm.provider "virtualbox" do |v|
-        v.memory = 2048
-        v.cpus = 2
+    disk_file = File.expand_path("jenkins_data.vdi", __dir__)
+    unless File.exist?(disk_file)
+      require 'vagrant/util/subprocess'
+      Vagrant::Util::Subprocess.execute("VBoxManage", "createhd", "--filename", disk_file, "--size", "10240")
     end
-      
-    config.vm.provision "shell", inline: <<-SHELL
-        sudo dnf module enable -y python39
-        sudo dnf install -y python39 python3-libselinux python3-dnf python3-policycoreutils
-        sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+
+    jenkins.vm.network "forwarded_port", guest: 8080, host: 8080
+
+    jenkins.vm.provider "virtualbox" do |vb|
+      vb.name = "jenkins-vm"
+      vb.memory = 6192
+      vb.cpus = 2
+      vb.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 1,
+                    "--device", 0, "--type", "hdd", "--medium", disk_file]
+      vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]	
+    end
+
+    jenkins.vm.provision "shell", inline: <<-SHELL
+      set -eux
+      sudo apt-get update -y
+      sudo apt-get install -y software-properties-common
+      sudo add-apt-repository -y ppa:openjdk-r/ppa
+      sudo apt-get update -y
+      sudo apt-get install -y openjdk-21-jdk curl gnupg
+
+      sudo update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+
+      sudo mkfs.ext4 /dev/sdb
+      sudo mkdir -p /var/lib/jenkins
+      echo "/dev/sdb /var/lib/jenkins ext4 defaults 0 2" | sudo tee -a /etc/fstab
+      sudo mount -a
+
+      curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+      echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+      sudo apt-get update -y
+      sudo apt-get install -y jenkins
+
+      sudo chown -R jenkins:jenkins /var/lib/jenkins
+      sudo systemctl enable jenkins
+      sudo systemctl start jenkins
+
+      #echo "Jenkins Initial Admin Password:"
+      #sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+      # Wait until Jenkins is ready
+      while ! curl -s http://localhost:8080/login >/dev/null; do echo "Waiting for Jenkins..."; sleep 10; done
+
+      # Download Jenkins CLI
+      wget http://localhost:8080/jnlpJars/jenkins-cli.jar -P /tmp
+ 
+
+      # Install Terraform (v1.6.6)
+      TERRAFORM_VERSION="1.11.4"
+      wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      sudo mv terraform /usr/local/bin/
+      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+      ##Install kubectl 
+      # This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+      # Create the keyring directory
+      sudo mkdir -p /etc/apt/keyrings
+
+      # Download the official GPG key
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | \
+      sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+      # Add the Kubernetes APT repo
+      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+        https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /" | \
+      sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+      # Set correct permissions
+      sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+      # Update and install kubectl
+      sudo apt-get update -y
+      sudo apt-get install -y kubectl
+
+      # Install kind (Kubernetes IN Docker) latest version
+      KIND_VERSION="v0.27.0"  # Change this to the latest if needed
+      curl -Lo kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+      chmod +x kind
+      sudo mv kind /usr/local/bin/kind  
+
+      #Install docker by adding Docker's official GPG key:
+      # … earlier in your provisioner …
+
+      # Install Docker CE on Ubuntu 22.04
+      sudo apt-get update -y
+      sudo apt-get install -y ca-certificates curl gnupg lsb-release tree
+
+      # Create keyrings directory
+      sudo install -m 0755 -d /etc/apt/keyrings
+
+      # Download Docker’s official GPG key
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+      sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+      sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+      # Add Docker repository
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+            https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo $VERSION_CODENAME) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+      # Refresh apt and install Docker packages
+      sudo apt-get update -y
+      sudo apt-get install -y \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin
+
+      # Verify installation
+      docker --version
+
+      # Add vagrant user to docker group to avoid 'permission denied' error
+      sudo usermod -aG docker vagrant
+
+      # Optional: restart shell for group change to apply (only works inside interactive shell)
+      # exec sg docker newgrp `id -gn`
+
+      # Enable and start Docker service (ensure it's running)
+      sudo systemctl enable docker  
+      sudo systemctl start docker
+
+      # Get Jenkins admin password
+      ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
+
+      echo "Jenkins Initial Admin Password:"
+      echo "$ADMIN_PASS"     
     SHELL
-
-    config.vm.define "k8s-master" do |master|
-        master.vm.box = IMAGE_NAME
-        master.vm.network "private_network", ip: "192.168.56.2"
-        master.vm.hostname = "k8s-master"
-        master.vm.provision "ansible" do |ansible|
-            ansible.playbook = "VM_provisioning/common-setup/common-setup.yml"
-            ansible.extra_vars = {
-                    node_ip: "192.168.56.2",
-                }
-        end
-        master.vm.provision "ansible" do |ansible|
-            ansible.playbook = "VM_provisioning/master-setup.yml"
-            ansible.extra_vars = {
-                node_ip: "192.168.56.2",
-                user: "vagrant",
-                pod_network_cidr: "10.100.0.0/16",
-            }
-        end
-    end
-
-    (1..N).each do |i|
-        config.vm.define "node-#{i}" do |node|
-            node.vm.box = IMAGE_NAME
-            node.vm.network "private_network", ip: "192.168.56.#{i + 2}"
-            node.vm.hostname = "node-#{i}"
-            node.vm.provision "ansible" do |ansible|
-                ansible.playbook = "VM_provisioning/common-setup/common-setup.yml"
-                ansible.extra_vars = {
-                    node_ip: "192.168.56.#{i + 2}",
-                }
-            end
-            node.vm.provision "ansible" do |ansible|
-                ansible.playbook = "VM_provisioning/worker-setup.yml"
-            end
-        end
-    end
+  end
 end

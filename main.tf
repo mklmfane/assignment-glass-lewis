@@ -1,65 +1,70 @@
-
-# Launch the Vagrant-based Kubernetes cluster
-resource "null_resource" "vagrant_cluster" {
+resource "null_resource" "kind_cluster" {
   provisioner "local-exec" {
     command = <<EOT
-      echo "🚀 Launching Vagrant cluster..."
-      vagrant up
-      echo "⏳ Waiting for Kubernetes API and nodes to become ready..."
-      ${path.module}/wait-for-k8s-ready.sh
+      set -eux
+
+      kind delete cluster --name kind || true
+
+      kind create cluster --name kind \
+        --config=${path.module}/kind/kind-three-node-cluster.yaml \
+        --kubeconfig=${path.module}/kubeconfig-kind.yaml
+
+      echo "Cluster created at $(date)"
     EOT
-    working_dir = "${path.module}"
-  }
-
-  triggers = {
-    always_run = "${timestamp()}"
+    interpreter = ["/bin/bash", "-c"]
   }
 }
 
+resource "null_resource" "wait_for_cluster_ready" {
+  depends_on = [null_resource.kind_cluster]
 
-# Wait for the Kubernetes API to become reachable and all nodes to be Ready
-resource "null_resource" "wait_for_k8s" {
-  provisioner "local-exec" {
-    command     = "${path.module}/wait-for-k8s-ready.sh"
-    working_dir = "${path.module}"
-  }
-
-  depends_on = [null_resource.vagrant_cluster]
-}
-
-resource "null_resource" "vagrant_cluster_and_k8s_wait" {
-  provisioner "local-exec" {
-    command     = <<EOT
-      echo "🚀 Launching Vagrant cluster..."
-      vagrant up
-      echo "⏳ Waiting for Kubernetes API and nodes to become ready..."
-      ${path.module}/wait-for-k8s-ready.sh
-    EOT
-    working_dir = "${path.module}"
-  }
-
-}
-
-resource "null_resource" "nginx_ingress_static" {
   provisioner "local-exec" {
     command = <<EOT
-      kubectl --kubeconfig=./VM_provisioning/_cluster_k8s_info/admin.conf apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/baremetal/deploy.yaml
-    EOT
-  }
+      echo "✅ Waiting for Kubernetes API to become fully responsive..."
 
-  depends_on = [null_resource.vagrant_cluster_and_k8s_wait]
+      export KUBECONFIG=${path.module}/kubeconfig-kind.yaml
+
+      for i in $(seq 1 60); do
+        if kubectl get ns kube-system >/dev/null 2>&1; then
+          echo "✅ kube-system is available"
+          break
+        fi
+        echo "⏳ Waiting for kube-system... ($i/60)"
+        sleep 5
+      done
+
+      echo "⏳ Sleeping an additional 60 seconds for full API warmup..."
+      sleep 60
+
+      # Final check
+      kubectl cluster-info || {
+        echo "❌ Kubernetes API not responsive"
+        exit 1
+      }
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
 }
 
+resource "null_resource" "verify_kubeconfig" {
+  depends_on = [null_resource.wait_for_cluster_ready]
 
-# This resource is used to destroy the Vagrant cluster when the Terraform destroy command is executed.
-resource "null_resource" "vagrant_cluster_destroy" {
   provisioner "local-exec" {
-    when        = destroy
-    command     = "vagrant destroy -f"
-    working_dir = "${path.module}"
+    command = <<EOT
+      echo "✅ Verifying kubeconfig without exposing credentials..."
+      kubectl config get-contexts --kubeconfig=${path.module}/kubeconfig-kind.yaml
+      kubectl config current-context --kubeconfig=${path.module}/kubeconfig-kind.yaml
+      mkdir -p $HOME/.kube
+      cp ${path.module}/kubeconfig-kind.yaml $HOME/.kube/config
+    EOT
+    interpreter = ["/bin/bash", "-c"]
   }
+}
 
-  triggers = {
-    always_run = "${timestamp()}"
-  }
+# This provider is used to interact with the Kubernetes cluster
+# created by the kind provider. It uses the kubeconfig file generated
+# by the kind provider to connect to the cluster.
+
+provider "kubectl" {
+  config_path = "$HOME/.kube/config"
 }
