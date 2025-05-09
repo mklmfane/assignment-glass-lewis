@@ -6,6 +6,12 @@ terraform {
       source  = "hashicorp/null"
       version = "3.2.4"
     }
+
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.14.0"
+    }
+
     helm = {
       source  = "hashicorp/helm"
       version = ">= 2.12.1"
