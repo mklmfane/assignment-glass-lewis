@@ -126,6 +126,10 @@ Vagrant.configure("2") do |config|
       # Add vagrant user to docker group to avoid 'permission denied' error
       sudo usermod -aG docker vagrant
 
+      # Granting docker privileges to jenkins user
+      sudo usermod -aG docker jenkins
+      sudo systemctl restart jenkins
+      
       # Optional: restart shell for group change to apply (only works inside interactive shell)
       # exec sg docker newgrp `id -gn`
 
