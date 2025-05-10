@@ -9,7 +9,7 @@ metadata:
   name: dockerhub-auth
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: mytoken
+  .dockerconfigjson: ${dockerconfigjson_b64}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
