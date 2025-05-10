@@ -1,16 +1,21 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: online-store
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: dockerhub-auth
-  namespace: default
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: ewogICJhdXRocyI6IHsKICAgICJodHRwczovL2luZGV4LmRvY2tlci5pby92MS8iOiB7CiAgICAgICJ1c2VybmFtZSI6ICJzYXJhZ296YTY0IiwKICAgICAgInBhc3N3b3JkIjogImRja3JfcGF0X1M1b0hCM1hGSGx0RG9OV051ci1TeVRzY2tROCIsCiAgICAgICJlbWFpbCI6ICJtaXJjZWFjb25zdGFudGluNThAZ21haWwuY29tIiwKICAgICAgImF1dGgiOiAiYzJGeVlXZHZlbUUyTkRwa1kydHlYM0JoZEY5VE5XOUlRak5ZUmtoc2RFUnZUbGRPZFhJdFUzbFVjMk5yVVRnPSIKICAgIH0KICB9Cn0K
+  .dockerconfigjson: mytoken
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: rabbitmq
+  namespace: online-store
 spec:
   serviceName: rabbitmq
   replicas: 1
@@ -60,6 +65,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rabbitmq-enabled-plugins
+  namespace: online-store
 data:
   rabbitmq_enabled_plugins: |
     [rabbitmq_management,rabbitmq_prometheus,rabbitmq_amqp1_0].
@@ -68,6 +74,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
+  namespace: online-store
 spec:
   selector:
     app: rabbitmq
@@ -84,6 +91,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: order-service
+  namespace: online-store
 spec:
   replicas: 1
   selector:
@@ -159,6 +167,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: order-service
+  namespace: online-store
 spec:
   type: ClusterIP
   ports:
@@ -172,6 +181,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: product-service
+  namespace: online-store
 spec:
   replicas: 1
   selector:
@@ -220,6 +230,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: product-service
+  namespace: online-store
 spec:
   type: ClusterIP
   ports:
@@ -233,6 +244,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: store-front
+  namespace: online-store
 spec:
   replicas: 1
   selector:
@@ -290,6 +302,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: store-front
+  namespace: online-store
 spec:
   type: LoadBalancer
   ports:
