@@ -2,7 +2,7 @@ variable "dockerconfigjson_b64" {}
 
 resource "local_file" "online_store_yaml" {
   filename = "${path.module}/manifests/online-store.yaml"
-  content  = templatefile("${path.module}/manifests/online-store.yaml", {
+  content  = templatefile("${path.module}/manifests/online-store-template.yaml", {
     dockerconfigjson_b64 = var.dockerconfigjson_b64
   })
 }
