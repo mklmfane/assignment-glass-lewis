@@ -67,9 +67,7 @@ pipeline {
     }
     failure {
       echo "❌ Pipeline failed. Cleaning up..."
-      dir('jenkins-vm') {
-        sh 'terraform destroy -auto-approve -no-color || true'
-      }
+      sh 'terraform destroy -auto-approve -no-color || true'
     }
   }
 }
