@@ -13,7 +13,7 @@ pipeline {
       }
     }
 
-    stage('Terraform Init') {
+    stage('Terraform Init to list files') {
       steps {
         sh '''
           echo "== Current Directory =="
@@ -29,13 +29,13 @@ pipeline {
       }
     }
 
-    stage('Terraform Plan') {
+    stage('Terraform Plan for Kubernetes clsuter') {
       steps {
         sh 'terraform plan -no-color -out=tfplan'
       }
     }
 
-    stage('Terraform Apply') {
+    stage('Create kubernetes Cluster using Terraform') {
       steps {
         sh 'terraform apply -auto-approve tfplan -no-color'
       }
