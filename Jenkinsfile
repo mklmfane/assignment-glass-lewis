@@ -17,13 +17,8 @@ pipeline {
         sh '''
           echo "== Current Directory =="
           pwd
-
-          echo "== Top-Level Contents =="
           ls -l
-
-          echo "== Searching for .tf files =="
           find . -type f -name "*.tf" || true
-
           terraform init -no-color
         '''
       }
@@ -45,7 +40,6 @@ pipeline {
       steps {
         sh '''
           echo "Waiting for Kubernetes cluster to be ready..."
-
           for i in {1..30}; do
             if kubectl get nodes >/dev/null 2>&1; then
               echo "✅ Kubernetes cluster is ready!"
@@ -76,15 +70,44 @@ pipeline {
         sh 'kubectl get all -n ingress-nginx'
       }
     }
+
+    stage('Deploy Online Store App (Terraform)') {
+      when {
+        expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+      }
+      environment {
+          DOCKERHUB_TOKEN_B64 = credentials('DOCKERHUB_TOKEN_B64')
+          TF_VAR_dockerconfigjson_b64 = "${DOCKERHUB_TOKEN_B64}"
+      }
+      steps {
+        dir('terraform/online-store') {
+          sh '''
+            echo $TF_VAR_dockerconfigjson_b64
+            echo "Injecting DockerHub secret into manifest using templatefile() in Terraform..."
+            terraform init -upgrade -no-color
+            terraform apply -auto-approve -no-color
+          '''
+        }
+      }
+    }
+
+    stage('Verify Store Deployment') {
+      when {
+        expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+      }
+      steps {
+        sh 'kubectl get all -n online-store'
+      }
+    }
   }
 
   post {
-    always {
-      echo "✅ Pipeline complete."
-    }
     failure {
-      echo "❌ Pipeline failed. Cleaning up..."
+      echo "❌ Pipeline failed. Cleaning up Kubernetes cluster..."
       sh 'terraform destroy -auto-approve -no-color || true'
+    }
+    always {
+      echo "✅ Pipeline completed."
     }
   }
 }
