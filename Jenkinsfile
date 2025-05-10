@@ -2,7 +2,6 @@ pipeline {
   agent any
 
   environment {
-    // Use default kubeconfig path that Terraform copies to
     KUBECONFIG = "${HOME}/.kube/config"
   }
 
@@ -13,7 +12,7 @@ pipeline {
       }
     }
 
-    stage('Terraform Init to list files') {
+    stage('Terraform Init for Kubernetes Cluster') {
       steps {
         sh '''
           echo "== Current Directory =="
@@ -24,39 +23,57 @@ pipeline {
 
           echo "== Searching for .tf files =="
           find . -type f -name "*.tf" || true
+
+          terraform init -no-color
         '''
-        sh 'terraform init -no-color'
       }
     }
 
-    stage('Terraform Plan for Kubernetes clsuter') {
+    stage('Terraform Plan for Kubernetes Cluster') {
       steps {
         sh 'terraform plan -no-color -out=tfplan'
       }
     }
 
-    stage('Create kubernetes Cluster using Terraform') {
+    stage('Create Kubernetes Cluster using Terraform') {
       steps {
         sh 'terraform apply -auto-approve tfplan -no-color'
       }
     }
 
-    stage('Verify Kubernetes Nodes') {
+    stage('Wait for Cluster Readiness (~5 minutes max)') {
       steps {
         sh '''
-          echo "Using kubeconfig at: $KUBECONFIG"
-          
-          if [ ! -f "$KUBECONFIG" ]; then
-            echo "❌ Kubeconfig not found at $KUBECONFIG"
-            exit 1
-          fi
+          echo "Waiting for Kubernetes cluster to be ready..."
 
-          chmod 600 "$KUBECONFIG"
-          echo "✅ kubeconfig permissions set"
-
-          echo "✅ Listing nodes:"
-          kubectl get nodes
+          for i in {1..30}; do
+            if kubectl get nodes >/dev/null 2>&1; then
+              echo "✅ Kubernetes cluster is ready!"
+              kubectl get nodes
+              break
+            fi
+            echo "Cluster not ready yet... retrying in 10 seconds"
+            sleep 10
+          done
         '''
+      }
+    }
+
+    stage('Deploy Ingress NGINX Controller (Terraform)') {
+      steps {
+        dir('terraform/ingress') {
+          sh '''
+            echo "Deploying ingress-nginx via Terraform..."
+            terraform init -no-color
+            terraform apply -auto-approve -no-color
+          '''
+        }
+      }
+    }
+
+    stage('Verify Ingress NGINX Deployment') {
+      steps {
+        sh 'kubectl get all -n ingress-nginx'
       }
     }
   }
