@@ -1,8 +1,5 @@
-provider "kubernetes" {
-  config_path = pathexpand("~/.kube/config")
-}
-
-resource "kubectl_manifest" "online_store" {
-  for_each = fileset(path.module, "online-store-template.yaml")
-  yaml_body = file("${path.module}/${each.value}")
+resource "null_resource" "apply_online_store" {
+  provisioner "local-exec" {
+    command = "kubectl apply -f ${path.module}/manifests/online-store-template.yaml"
+  }
 }
