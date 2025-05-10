@@ -13,3 +13,15 @@ resource "null_resource" "apply_online_store" {
   }
   depends_on = [local_file.online_store_yaml]
 }
+
+resource "null_resource" "cleanup_manifest" {
+  provisioner "local-exec" {
+    command = "rm -f ${local_file.online_store_yaml.filename}"
+  }
+
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  depends_on = [null_resource.apply_online_store]
+}
