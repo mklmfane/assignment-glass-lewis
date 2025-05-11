@@ -46,7 +46,6 @@ Vagrant.configure("2") do |config|
       sudo chown -R jenkins:jenkins /var/lib/jenkins
       sudo systemctl enable jenkins
       sudo systemctl restart jenkins
-      sudo newgrp docker
 
       # Wait until Jenkins is ready
       while ! curl -s http://localhost:8080/login >/dev/null; do echo "Waiting for Jenkins..."; sleep 10; done
@@ -80,6 +79,7 @@ Vagrant.configure("2") do |config|
       # Add vagrant user to docker group to avoid 'permission denied' error
       sudo usermod -aG docker vagrant
       sudo usermod -aG docker jenkins
+      echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins
       sudo systemctl enable docker
       sudo systemctl start docker
 

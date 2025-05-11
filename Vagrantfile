@@ -9,7 +9,9 @@ Vagrant.configure("2") do |config|
       Vagrant::Util::Subprocess.execute("VBoxManage", "createhd", "--filename", disk_file, "--size", "10240")
     end
 
-    jenkins.vm.network "forwarded_port", guest: 8080, host: 8080
+    jenkins.vm.network "forwarded_port", guest: 8080, host: 18080   # Jenkins
+    jenkins.vm.network "forwarded_port", guest: 5000, host: 5000    # Docker Registry (HTTPS)
+    jenkins.vm.network "forwarded_port", guest: 5080, host: 30003   # Docker Registry UI
 
     jenkins.vm.provider "virtualbox" do |vb|
       vb.name = "jenkins-vm"
@@ -45,9 +47,6 @@ Vagrant.configure("2") do |config|
       sudo systemctl enable jenkins
       sudo systemctl start jenkins
 
-      #echo "Jenkins Initial Admin Password:"
-      #sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-
       # Wait until Jenkins is ready
       while ! curl -s http://localhost:8080/login >/dev/null; do echo "Waiting for Jenkins..."; sleep 10; done
 
@@ -62,7 +61,7 @@ Vagrant.configure("2") do |config|
       sudo mv terraform /usr/local/bin/
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
-      ##Install kubectl 
+      ## Install kubectl 
       # This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
       # Create the keyring directory
       sudo mkdir -p /etc/apt/keyrings
@@ -127,7 +126,6 @@ Vagrant.configure("2") do |config|
 
       # Granting docker privileges to jenkins user
       sudo usermod -aG docker jenkins
-      sudo systemctl restart jenkins
       
       # Optional: restart shell for group change to apply (only works inside interactive shell)
       # exec sg docker newgrp `id -gn`
@@ -135,6 +133,7 @@ Vagrant.configure("2") do |config|
       # Enable and start Docker service (ensure it's running)
       sudo systemctl enable docker  
       sudo systemctl start docker
+      sudo systemctl restart jenkins
 
       # Install Helm for Ubuntu 22.04
       curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
@@ -143,6 +142,18 @@ Vagrant.configure("2") do |config|
       sudo apt-get update -y
       sudo apt-get install -y helm
       
+      # Docker Compose Installation
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      sudo apt-get update -y
+      sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+      
+      DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+      mkdir -p $DOCKER_CONFIG/cli-plugins
+      curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+      sudo chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+
+
       # Get Jenkins admin password
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
 
