@@ -4,10 +4,10 @@ resource "null_resource" "kind_cluster" {
       set -eux
 
       # Delete any existing kind cluster
-      kind delete cluster --name kind || true
+      sudo kind delete cluster --name kind || true
 
       # Create new kind cluster and write kubeconfig to a local file
-      kind create cluster --name kind \
+      sudo kind create cluster --name kind \
         --config=./kind/kind-three-node-cluster.yaml \
         --kubeconfig=./kubeconfig-kind.yaml
 
