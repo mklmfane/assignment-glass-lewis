@@ -14,25 +14,31 @@ pipeline {
 
     stage('Terraform Init for Kubernetes Cluster') {
       steps {
-        sh '''
-          echo "== Current Directory =="
-          pwd
-          ls -l
-          find . -type f -name "*.tf" || true
-          terraform init -no-color
-        '''
+        dir('terraform/create-k8s-cluster') {
+          sh '''
+            echo "== Current Directory =="
+            pwd
+            ls -l
+            find . -type f -name "*.tf" || true
+            terraform init -no-color
+          '''
+        }
       }
     }
 
     stage('Terraform Plan for Kubernetes Cluster') {
       steps {
-        sh 'terraform plan -no-color -out=tfplan'
+        dir('terraform/create-k8s-cluster') {
+          sh 'terraform plan -no-color -out=tfplan'
+        }
       }
     }
 
     stage('Create Kubernetes Cluster using Terraform') {
       steps {
-        sh 'terraform apply -auto-approve tfplan -no-color'
+        dir('terraform/create-k8s-cluster') {  
+          sh 'terraform apply -auto-approve tfplan -no-color'
+        }
       }
     }
 

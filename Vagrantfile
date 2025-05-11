@@ -98,8 +98,11 @@ Vagrant.configure("2") do |config|
       #Install docker by adding Docker's official GPG key:
       # … earlier in your provisioner …
       # Download Docker’s official GPG key
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-      sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o docker.gpg
+      sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg docker.gpg
+      rm docker.gpg
+
 
       sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
@@ -142,23 +145,119 @@ Vagrant.configure("2") do |config|
       sudo apt-get update -y
       sudo apt-get install -y helm
       
-      # Docker Compose Installation
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-      sudo apt-get update -y
-      sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-      
+      # Install docker compose CLi plugin
+      sudo apt-get install -y docker-compose-plugin
       DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
       mkdir -p $DOCKER_CONFIG/cli-plugins
       curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
       sudo chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 
-      # Get Jenkins admin password
-      ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
+      # Docker Registry: Auth, TLS, Compose config
+      sudo mkdir -p /opt/docker-registry/auth
+      docker run --rm --entrypoint htpasswd httpd:2 -Bbn myuser mypassword | sudo tee /opt/docker-registry/auth/htpasswd
 
-      echo "Jenkins Initial Admin Password:"
-      echo "$ADMIN_PASS"     
+      # Write nginx.conf with proper CORS and body size settings
+      cat <<'NGINX_CONF' | sudo tee /opt/docker-registry/nginx.conf
+events {}
+
+http {
+  client_max_body_size 100M;
+
+  server {
+    listen 5000;
+
+    location / {
+      proxy_pass http://registry:5000;
+
+      add_header 'Access-Control-Allow-Origin' 'http://localhost:30003' always;
+      add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+      add_header 'Access-Control-Allow-Headers' 'Authorization, Accept, Origin' always;
+      add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+      if ($request_method = OPTIONS ) {
+        add_header 'Access-Control-Max-Age' 1728000;
+        add_header 'Content-Type' 'text/plain charset=UTF-8';
+        add_header 'Content-Length' 0;
+        return 204;
+      }
+    }
+  }
+}
+NGINX_CONF
+
+      # Write docker-compose.yml for Docker Registry, Nginx, and UI
+      cat <<EOF | sudo tee /opt/docker-registry/docker-compose.yml
+services:
+  registry:
+    image: registry:2
+    container_name: registry
+    restart: always
+    expose:
+      - "5000"
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+    volumes:
+      - registry-data:/var/lib/registry
+      - ./auth:/auth
+    networks:
+      - regnet
+
+  nginx:
+    image: nginx:alpine
+    container_name: registry-proxy
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - registry
+    networks:
+      - regnet
+
+  registry-ui:
+    image: joxit/docker-registry-ui:2.5.7
+    container_name: registry-ui
+    restart: always
+    ports:
+      - "5080:80"
+    environment:
+      - REGISTRY_TITLE=Local Docker Registry
+      - REGISTRY_URL=http://localhost:5000
+      - DELETE_IMAGES=true
+      - SHOW_CATALOG_NB_TAGS=true
+      - SINGLE_REGISTRY=true
+      - BASIC_AUTH=true
+      - REGISTRY_USER=myuser
+      - REGISTRY_PASS=mypassword
+    depends_on:
+      - nginx
+    networks:
+      - regnet
+
+volumes:
+  registry-data:
+
+networks:
+  regnet:
+EOF
+
+      cd /opt/docker-registry
+      sudo docker compose down || true
+      sudo docker compose up -d
+
+      ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
+      echo "=============================="
+      echo "Jenkins URL     : http://localhost:18080"
+      echo "Admin Pass      : $ADMIN_PASS"
+      echo "Docker Registry : https://localhost:5000"
+      echo "Registry UI     : http://localhost:30003"
+      echo "Login: myuser / mypassword"
+      echo "=============================="
+  
     SHELL
   end
 end
