@@ -89,9 +89,6 @@ Vagrant.configure("2") do |config|
       chmod +x kind
       sudo mv kind /usr/local/bin/kind  
 
-      #Install docker by adding Docker's official GPG key:
-      # … earlier in your provisioner …
-
       # Install Docker CE on Ubuntu 22.04
       sudo apt-get update -y
       sudo apt-get install -y ca-certificates curl gnupg lsb-release tree
@@ -99,6 +96,8 @@ Vagrant.configure("2") do |config|
       # Create keyrings directory
       sudo install -m 0755 -d /etc/apt/keyrings
 
+      #Install docker by adding Docker's official GPG key:
+      # … earlier in your provisioner …
       # Download Docker’s official GPG key
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
       sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -137,6 +136,13 @@ Vagrant.configure("2") do |config|
       sudo systemctl enable docker  
       sudo systemctl start docker
 
+      # Install Helm for Ubuntu 22.04
+      curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+      sudo apt-get install apt-transport-https --yes
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+      sudo apt-get update -y
+      sudo apt-get install -y helm
+      
       # Get Jenkins admin password
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
 
