@@ -1,43 +1,42 @@
 pipeline {
-  agent any
+    agent any
 
-
-  environment {
-    REGISTRY_DIR = '/opt/docker-registry'
-  }
-
-  stages {
-    stage('Checkout Code') {
-      steps {
-        git url: 'https://github.com/mklmfane/assignment-glass-lewis.git'
-      }
+    environment {
+        REGISTRY_DIR = '/opt/docker-registry'
     }
 
-    stage('Create Self-Hosted Docker Registry') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-          sh '''
-            set -eux
-
-            # Step 1: Copy the nginx.sh script from the repository to the Jenkins workspace
-            echo "Copying the nginx.sh script from the repository"
-            cp docker-registry/nginx.sh /tmp/nginx.sh
-
-            # Step 2: Modify the script to replace variables with credentials from Jenkins
-            echo "Creating the script with proper credentials"
-
-            # Replace placeholders in the script with the environment variables from Jenkins
-            sed -i "s/\$REG_USER/$REG_USER/" /tmp/nginx.sh
-            sed -i "s/\$REG_PASS/$REG_PASS/" /tmp/nginx.sh
-
-            # Step 3: Run the nginx.sh script with administrator privileges
-            sudo bash /tmp/nginx.sh
-
-            echo "✅ Docker Registry available at: http://localhost:5000"
-            echo "✅ Registry UI available at: http://localhost:30003"
-          '''
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/mklmfane/assignment-glass-lewis.git'
+            }
         }
-      }
+
+        stage('Create Self-Hosted Docker Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                    withEnv(["REG_USER=${REG_USER}", "REG_PASS=${REG_PASS}"]) {
+                        sh '''
+                            set -eux
+
+                            # Step 1: Copy the nginx.sh script from the repository to the Jenkins workspace
+                            echo "Copying the nginx.sh script from the repository"
+                            cp docker-registry/nginx.sh /tmp/nginx.sh
+
+                            # Ensure the script is executable
+                            sudo chmod +x /tmp/nginx.sh
+
+                            # Step 2: Run the nginx.sh script
+                            echo "Running the nginx.sh script with credentials"
+                            sudo bash /tmp/nginx.sh
+
+                            # After running the script, print out the status of the registry
+                            echo "✅ Docker Registry available at: http://localhost:5000"
+                            echo "✅ Registry UI available at: http://localhost:30003"
+                        '''
+                    }
+                }
+            }
+        }
     }
-  }
 }

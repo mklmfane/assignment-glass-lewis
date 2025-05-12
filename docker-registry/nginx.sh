@@ -3,14 +3,14 @@
 
 # Ensure necessary directories and files are created
 sudo mkdir -p /opt/docker-registry/auth
-
 sudo chown -R 1000:1000 /opt/docker-registry/auth
 sudo chmod -R 755 /opt/docker-registry/auth
 
-sudo docker run --rm --entrypoint htpasswd httpd:2 -Bbn $REG_USER $REG_PASS | sudo tee /opt/docker-registry/auth/htpasswd
+# Generate htpasswd file
+sudo docker run --rm --entrypoint htpasswd httpd:2 -Bbn "$REG_USER" "$REG_PASS" | sudo tee /opt/docker-registry/auth/htpasswd
 
 # Write nginx.conf with proper CORS and body size settings
-cat <<'NGINX_CONF' | sudo tee /opt/docker-registry/nginx.conf
+cat <<EOF | sudo tee /opt/docker-registry/nginx.conf
 events {}
 
 http {
@@ -27,7 +27,7 @@ http {
       add_header 'Access-Control-Allow-Headers' 'Authorization, Accept, Origin' always;
       add_header 'Access-Control-Allow-Credentials' 'true' always;
 
-      if ($request_method = OPTIONS ) {
+      if (\$request_method = OPTIONS ) {
         add_header 'Access-Control-Max-Age' 1728000;
         add_header 'Content-Type' 'text/plain charset=UTF-8';
         add_header 'Content-Length' 0;
@@ -36,7 +36,7 @@ http {
     }
   }
 }
-NGINX_CONF
+EOF
 
 # Write docker-compose.yml for Docker Registry, Nginx, and UI
 cat <<EOF | sudo tee /opt/docker-registry/docker-compose.yml
