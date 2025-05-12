@@ -157,9 +157,24 @@ Vagrant.configure("2") do |config|
       # Allow jenkin user to create the auth file and set up docker registry
       echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins
 
+      # Clean up broken or half-installed from npm packages
+      sudo apt-get remove -y nodejs npm || true
+      sudo apt-get remove -y libnode72 || true
+      sudo apt-get remove -y nodejs || true
+      sudo apt-get remove -y npm || true
+      sudo apt-get remove -y nodejs-dev || true
+      sudo apt-get purge -y nodejs npm || true
+      sudo apt-get autoremove -y || true
+      sudo rm -rf /usr/local/lib/node_modules || true
+      sudo rm -rf ~/.npm ~/.nvm || true
 
      ## Install npm for frontend docker application and for docker backend
-     sudo apt install -y npm  
+      curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      sudo apt remove -y libnode72 || true
+      sudo dpkg -i /var/cache/apt/archives/nodejs_18.20.8-1nodesource1_amd64.deb
+      sudo apt update -y
+      sudo apt-get install -y nodejs
+      sudo apt install -y npm  
 
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
       echo "=============================="
