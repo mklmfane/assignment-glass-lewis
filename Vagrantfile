@@ -157,6 +157,10 @@ Vagrant.configure("2") do |config|
       # Allow jenkin user to create the auth file and set up docker registry
       echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins
 
+
+     ## Install npm for frontend docker application and for docker backend
+     suod apt install -y npm  
+
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
       echo "=============================="
       echo "Jenkins URL     : http://localhost:18080"
