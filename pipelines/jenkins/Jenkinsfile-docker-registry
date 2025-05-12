@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY_DIR = '/opt/docker-registry'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/mklmfane/assignment-glass-lewis.git'
+            }
+        }
+
+        stage('Create Self-Hosted Docker Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REGUSER', passwordVariable: 'REGPASSWORD')]) {
+                    sh '''
+                        set -eux
+
+                        echo "Copying the nginx.sh script to /tmp"
+                        cp docker-registry/nginx.sh /tmp/nginx.sh
+                        sudo chmod +x /tmp/nginx.sh
+
+                        echo "Running nginx.sh with registry credentials"
+                        sudo bash /tmp/nginx.sh "$REGUSER" "$REGPASSWORD"
+
+                        echo "✅ Docker Registry running at http://localhost:5000"
+                        echo "✅ UI accessible at http://localhost:30003"
+                    '''
+                }
+            }
+        }
+    }
+}
