@@ -159,7 +159,7 @@ Vagrant.configure("2") do |config|
 
 
      ## Install npm for frontend docker application and for docker backend
-     suod apt install -y npm  
+     sudo apt install -y npm  
 
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
       echo "=============================="
