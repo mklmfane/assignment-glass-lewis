@@ -60,7 +60,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'REGISTRY_CREDS', variable: 'REGISTRY_CREDS')]) {
                         def (user, pass) = REGISTRY_CREDS.tokenize(':')
                         sh """
-                            echo "$pass" | docker login ${REGISTRY_URL} -u "$user" --password-stdin
+                            echo "$pass" | docker login ${REGISTRY_URL} -u "$user" -p "$pass" --password-stdin
                             docker tag frontend-service ${FRONTEND_IMAGE}
                             docker tag backend-service ${BACKEND_IMAGE}
                             docker push ${FRONTEND_IMAGE}
