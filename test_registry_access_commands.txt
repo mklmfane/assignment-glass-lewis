@@ -4,5 +4,3 @@ docker tag alpine localhost:5000/alpine
 docker push localhost:5000/alpine
 
 curl -u myuser:mypassword http://localhost:5000/v2/_catalog
-
-curl -H "Origin: http://localhost:30003" -I http://localhost:5000/v2/_catalog

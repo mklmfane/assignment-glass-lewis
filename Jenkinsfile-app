@@ -1,0 +1,125 @@
+pipeline {
+  agent any
+
+  environment {
+    REGISTRY_DIR = '/opt/docker-registry'
+  }  
+
+  stages {
+    stage('Checkout Code') {
+        steps {
+            git url: 'https://github.com/mklmfane/assignment-glass-lewis.git'
+      }
+    }
+    
+    stage('Create Self-Hosted Docker Registry') {
+        steps {
+            withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+            sh '''
+                set -eux
+
+                sudo mkdir -p ${REGISTRY_DIR}/auth
+
+                # Create htpasswd file with secure credentials
+                docker run --rm --entrypoint htpasswd httpd:2 -Bbn "$REG_USER" "$REG_PASS" | sudo tee ${REGISTRY_DIR}/auth/htpasswd
+
+                # Write nginx.conf
+                cat <<'NGINX_CONF' | sudo tee ${REGISTRY_DIR}/nginx.conf
+        events {}
+
+        http {
+        client_max_body_size 100M;
+
+        server {
+            listen 5000;
+
+            location / {
+            proxy_pass http://registry:5000;
+
+            add_header 'Access-Control-Allow-Origin' 'http://localhost:30003' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Accept, Origin' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+            if ($request_method = OPTIONS ) {
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain charset=UTF-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            }
+        }
+        }
+        NGINX_CONF
+
+                # Write docker-compose.yml
+                cat <<EOF | sudo tee ${REGISTRY_DIR}/docker-compose.yml
+        services:
+        registry:
+            image: registry:2
+            container_name: registry
+            restart: always
+            expose:
+            - "5000"
+            environment:
+            - REGISTRY_AUTH=htpasswd
+            - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+            - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+            volumes:
+            - registry-data:/var/lib/registry
+            - ./auth:/auth
+            networks:
+            - regnet
+
+        nginx:
+            image: nginx:alpine
+            container_name: registry-proxy
+            restart: always
+            ports:
+            - "5000:5000"
+            volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+            depends_on:
+            - registry
+            networks:
+            - regnet
+
+        registry-ui:
+            image: joxit/docker-registry-ui:2.5.7
+            container_name: registry-ui
+            restart: always
+            ports:
+            - "5080:80"
+            environment:
+            - REGISTRY_TITLE=Local Docker Registry
+            - REGISTRY_URL=http://localhost:5000
+            - DELETE_IMAGES=true
+            - SHOW_CATALOG_NB_TAGS=true
+            - SINGLE_REGISTRY=true
+            - BASIC_AUTH=true
+            - REGISTRY_USER=$REG_USER
+            - REGISTRY_PASS=$REG_PASS
+            depends_on:
+            - nginx
+            networks:
+            - regnet
+
+        volumes:
+        registry-data:
+
+        networks:
+        regnet:
+        EOF
+
+                cd ${REGISTRY_DIR}
+                sudo docker compose down || true
+                sudo docker compose up -d
+                
+                echo "Docker Registry : https://localhost:5000"
+                echo "Registry UI     : http://localhost:30003"
+            '''
+            }
+        }
+    }
+  }
+}

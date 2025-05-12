@@ -152,110 +152,15 @@ Vagrant.configure("2") do |config|
       curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
       sudo chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-
       # Docker Registry: Auth, TLS, Compose config
       sudo mkdir -p /opt/docker-registry/auth
-      docker run --rm --entrypoint htpasswd httpd:2 -Bbn myuser mypassword | sudo tee /opt/docker-registry/auth/htpasswd
-
-      # Write nginx.conf with proper CORS and body size settings
-      cat <<'NGINX_CONF' | sudo tee /opt/docker-registry/nginx.conf
-events {}
-
-http {
-  client_max_body_size 100M;
-
-  server {
-    listen 5000;
-
-    location / {
-      proxy_pass http://registry:5000;
-
-      add_header 'Access-Control-Allow-Origin' 'http://localhost:30003' always;
-      add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
-      add_header 'Access-Control-Allow-Headers' 'Authorization, Accept, Origin' always;
-      add_header 'Access-Control-Allow-Credentials' 'true' always;
-
-      if ($request_method = OPTIONS ) {
-        add_header 'Access-Control-Max-Age' 1728000;
-        add_header 'Content-Type' 'text/plain charset=UTF-8';
-        add_header 'Content-Length' 0;
-        return 204;
-      }
-    }
-  }
-}
-NGINX_CONF
-
-      # Write docker-compose.yml for Docker Registry, Nginx, and UI
-      cat <<EOF | sudo tee /opt/docker-registry/docker-compose.yml
-services:
-  registry:
-    image: registry:2
-    container_name: registry
-    restart: always
-    expose:
-      - "5000"
-    environment:
-      - REGISTRY_AUTH=htpasswd
-      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
-      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
-    volumes:
-      - registry-data:/var/lib/registry
-      - ./auth:/auth
-    networks:
-      - regnet
-
-  nginx:
-    image: nginx:alpine
-    container_name: registry-proxy
-    restart: always
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - registry
-    networks:
-      - regnet
-
-  registry-ui:
-    image: joxit/docker-registry-ui:2.5.7
-    container_name: registry-ui
-    restart: always
-    ports:
-      - "5080:80"
-    environment:
-      - REGISTRY_TITLE=Local Docker Registry
-      - REGISTRY_URL=http://localhost:5000
-      - DELETE_IMAGES=true
-      - SHOW_CATALOG_NB_TAGS=true
-      - SINGLE_REGISTRY=true
-      - BASIC_AUTH=true
-      - REGISTRY_USER=myuser
-      - REGISTRY_PASS=mypassword
-    depends_on:
-      - nginx
-    networks:
-      - regnet
-
-volumes:
-  registry-data:
-
-networks:
-  regnet:
-EOF
-
-      cd /opt/docker-registry
-      sudo docker compose down || true
-      sudo docker compose up -d
+      # Allow jenkin user to create the auth file and set up docker registry
+      echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins
 
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
       echo "=============================="
       echo "Jenkins URL     : http://localhost:18080"
       echo "Admin Pass      : $ADMIN_PASS"
-      echo "Docker Registry : https://localhost:5000"
-      echo "Registry UI     : http://localhost:30003"
-      echo "Login: myuser / mypassword"
       echo "=============================="
   
     SHELL
