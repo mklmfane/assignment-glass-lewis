@@ -3,6 +3,10 @@
 
 # Ensure necessary directories and files are created
 sudo mkdir -p /opt/docker-registry/auth
+
+sudo chown -R 1000:1000 /opt/docker-registry/auth
+sudo chmod -R 755 /opt/docker-registry/auth
+
 sudo docker run --rm --entrypoint htpasswd httpd:2 -Bbn $REG_USER $REG_PASS | sudo tee /opt/docker-registry/auth/htpasswd
 
 # Write nginx.conf with proper CORS and body size settings
@@ -90,10 +94,6 @@ volumes:
 networks:
   regnet:
 EOF
-
-
-sudo chown -R 1000:1000 /opt/docker-registry/auth
-sudo chmod -R 755 /opt/docker-registry/auth
 
 # Deploy the Docker registry stack
 cd /opt/docker-registry
