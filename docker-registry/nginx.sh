@@ -81,7 +81,7 @@ services:
       - SHOW_CATALOG_NB_TAGS=true
       - SINGLE_REGISTRY=true
       - BASIC_AUTH=true
-      - REGISTRY_USER="myuser"
+      - REGISTRY_USER="myusername"
       - REGISTRY_PASS="mypassword"
     depends_on:
       - nginx
