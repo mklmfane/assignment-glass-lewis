@@ -14,27 +14,20 @@ pipeline {
 
         stage('Create Self-Hosted Docker Registry') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                    withEnv(["REG_USER=${REG_USER}", "REG_PASS=${REG_PASS}"]) {
-                        sh '''
-                            set -eux
+                withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDS', usernameVariable: 'REGUSER', passwordVariable: 'REGPASSWORD')]) {
+                    sh '''
+                        set -eux
 
-                            # Step 1: Copy the nginx.sh script from the repository to the Jenkins workspace
-                            echo "Copying the nginx.sh script from the repository"
-                            cp docker-registry/nginx.sh /tmp/nginx.sh
+                        echo "Copying the nginx.sh script to /tmp"
+                        cp docker-registry/nginx.sh /tmp/nginx.sh
+                        sudo chmod +x /tmp/nginx.sh
 
-                            # Ensure the script is executable
-                            sudo chmod +x /tmp/nginx.sh
+                        echo "Running nginx.sh with registry credentials"
+                        sudo bash /tmp/nginx.sh "$REGUSER" "$REGPASSWORD"
 
-                            # Step 2: Run the nginx.sh script
-                            echo "Running the nginx.sh script with credentials"
-                            sudo bash /tmp/nginx.sh
-
-                            # After running the script, print out the status of the registry
-                            echo "✅ Docker Registry available at: http://localhost:5000"
-                            echo "✅ Registry UI available at: http://localhost:30003"
-                        '''
-                    }
+                        echo "✅ Docker Registry running at http://localhost:5000"
+                        echo "✅ UI accessible at http://localhost:30003"
+                    '''
                 }
             }
         }
