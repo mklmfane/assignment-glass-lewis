@@ -1,6 +1,7 @@
 pipeline {
   agent any
 
+
   environment {
     REGISTRY_DIR = '/opt/docker-registry'
   }
@@ -18,75 +19,19 @@ pipeline {
           sh '''
             set -eux
 
-            # Step 1: Copy nginx.conf from the repository to the registry config location
-            sudo mkdir -p ${REGISTRY_DIR}
-            sudo cp docker-registry/nginx.conf ${REGISTRY_DIR}/nginx.conf
+            # Step 1: Copy the nginx.sh script from the repository to the Jenkins workspace
+            echo "Copying the nginx.sh script from the repository"
+            cp docker-registry/nginx.sh /tmp/nginx.sh
 
-            # Step 2: Generate htpasswd for authentication
-            sudo mkdir -p ${REGISTRY_DIR}/auth
-            docker run --rm --entrypoint htpasswd httpd:2 -Bbn "$REG_USER" "$REG_PASS" | sudo tee ${REGISTRY_DIR}/auth/htpasswd
+            # Step 2: Modify the script to replace variables with credentials from Jenkins
+            echo "Creating the script with proper credentials"
 
-            # Step 3: Create docker-compose.yml
-            cat <<EOF | sudo tee ${REGISTRY_DIR}/docker-compose.yml
-services:
-  registry:
-    image: registry:2
-    container_name: registry
-    restart: always
-    environment:
-      - REGISTRY_AUTH=htpasswd
-      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
-      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
-    volumes:
-      - registry-data:/var/lib/registry
-      - ./auth:/auth
-    networks:
-      - regnet
+            # Replace placeholders in the script with the environment variables from Jenkins
+            sed -i "s/\$REG_USER/$REG_USER/" /tmp/nginx.sh
+            sed -i "s/\$REG_PASS/$REG_PASS/" /tmp/nginx.sh
 
-  nginx:
-    image: nginx:alpine
-    container_name: registry-proxy
-    restart: always
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - registry
-    networks:
-      - regnet
-
-  registry-ui:
-    image: joxit/docker-registry-ui:2.5.7
-    container_name: registry-ui
-    restart: always
-    ports:
-      - "5080:80"
-    environment:
-      - REGISTRY_TITLE=Local Docker Registry
-      - REGISTRY_URL=http://nginx:5000
-      - DELETE_IMAGES=true
-      - SHOW_CATALOG_NB_TAGS=true
-      - SINGLE_REGISTRY=true
-      - BASIC_AUTH=true
-      - REGISTRY_USER=$REG_USER
-      - REGISTRY_PASS=$REG_PASS
-    depends_on:
-      - nginx
-    networks:
-      - regnet
-
-volumes:
-  registry-data:
-
-networks:
-  regnet:
-EOF
-
-            # Step 4: Deploy the Docker registry stack
-            cd ${REGISTRY_DIR}
-            sudo docker compose down || true
-            sudo docker compose up -d
+            # Step 3: Run the nginx.sh script with administrator privileges
+            sudo bash /tmp/nginx.sh
 
             echo "✅ Docker Registry available at: http://localhost:5000"
             echo "✅ Registry UI available at: http://localhost:30003"

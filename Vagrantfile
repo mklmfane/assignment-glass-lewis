@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
     jenkins.vm.provision "shell", inline: <<-SHELL
       set -eux
       sudo apt-get update -y
-      sudo apt-get install -y software-properties-common
+      sudo apt-get install -y software-properties-common apache2-utils
       sudo add-apt-repository -y ppa:openjdk-r/ppa
       sudo apt-get update -y
       sudo apt-get install -y openjdk-21-jdk curl gnupg
