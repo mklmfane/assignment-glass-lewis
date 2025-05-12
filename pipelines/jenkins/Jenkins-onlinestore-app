@@ -57,8 +57,8 @@ pipeline {
         stage('Login and Push to Registry') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'REGCREDS', variable: 'REGCREDS')]) {
-                        def (user, pass) = REGCREDS.tokenize(':')
+                    withCredentials([string(credentialsId: 'REGISTRY_CREDS', variable: 'REGISTRY_CREDS')]) {
+                        def (user, pass) = REGISTRY_CREDS.tokenize(':')
                         sh """
                             echo "$pass" | docker login ${REGISTRY_URL} -u "$user" --password-stdin
                             docker tag frontend-service ${FRONTEND_IMAGE}
