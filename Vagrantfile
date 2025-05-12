@@ -15,7 +15,7 @@ Vagrant.configure("2") do |config|
 
     jenkins.vm.provider "virtualbox" do |vb|
       vb.name = "jenkins-vm"
-      vb.memory = 6192
+      vb.memory = 8192
       vb.cpus = 2
       vb.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 1,
                     "--device", 0, "--type", "hdd", "--medium", disk_file]
