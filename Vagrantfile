@@ -15,7 +15,7 @@ Vagrant.configure("2") do |config|
 
     jenkins.vm.provider "virtualbox" do |vb|
       vb.name = "jenkins-vm"
-      vb.memory = 8192
+      vb.memory = 6400
       vb.cpus = 2
       vb.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 1,
                     "--device", 0, "--type", "hdd", "--medium", disk_file]
@@ -24,7 +24,7 @@ Vagrant.configure("2") do |config|
 
     jenkins.vm.provision "shell", inline: <<-SHELL
       set -eux
-      sudo apt-get update -y
+      sudo apt-get update -y && sudo apt-get upgrade -y
       sudo apt-get install -y software-properties-common apache2-utils
       sudo add-apt-repository -y ppa:openjdk-r/ppa
       sudo apt-get update -y
@@ -53,7 +53,6 @@ Vagrant.configure("2") do |config|
       # Download Jenkins CLI
       wget http://localhost:8080/jnlpJars/jenkins-cli.jar -P /tmp
  
-
       # Install Terraform (v1.6.6)
       TERRAFORM_VERSION="1.11.4"
       wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
@@ -157,30 +156,25 @@ Vagrant.configure("2") do |config|
       # Allow jenkin user to create the auth file and set up docker registry
       echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins
 
-      # Clean up broken or half-installed from npm packages
-      sudo apt-get remove -y nodejs npm || true
-      sudo apt-get remove -y libnode72 || true
-      sudo apt-get remove -y nodejs || true
-      sudo apt-get remove -y npm || true
-      sudo apt-get remove -y nodejs-dev || true
-      sudo apt-get purge -y nodejs npm || true
-      sudo apt-get autoremove -y || true
-      sudo rm -rf /usr/local/lib/node_modules || true
-      sudo rm -rf ~/.npm ~/.nvm || true
 
      ## Install npm for frontend docker application and for docker backend
       curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-      sudo apt remove -y libnode72 || true
-      sudo dpkg -i /var/cache/apt/archives/nodejs_18.20.8-1nodesource1_amd64.deb
-      sudo apt update -y
-      sudo apt-get install -y nodejs
-      sudo apt install -y npm  
+      sudo apt install -y nodejs
+
+      # 3. Confirm both node and npm
+      node -v
+      npm -v
+
+      #Complete upgrading
+      sudo apt-get update -y && sudo apt-get upgrade -y
 
       ADMIN_PASS=$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)
       echo "=============================="
       echo "Jenkins URL     : http://localhost:18080"
       echo "Admin Pass      : $ADMIN_PASS"
       echo "=============================="
+
+      sudo reboot
   
     SHELL
   end

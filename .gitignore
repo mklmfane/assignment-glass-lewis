@@ -6,4 +6,6 @@ terraform.tfstate.backup
 terraform.tfstate*
 **/*.vdi
 *.vdi
+*.box
+**/*.box
 
