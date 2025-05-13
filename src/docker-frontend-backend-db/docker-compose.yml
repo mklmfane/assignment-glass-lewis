@@ -1,6 +1,7 @@
 services:
   web:
     build: ./frontend
+    image: frontend-service
     depends_on:
       - api
     ports:
@@ -9,6 +10,7 @@ services:
       - network-backend
   api:
     build: ./backend
+    image: backend-service
     depends_on:
       - mongo
     ports:
