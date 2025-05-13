@@ -17,7 +17,7 @@ cat <<NGINX_CONF | sudo tee /opt/docker-registry/nginx.conf
 events {}
 
 http {
-  client_max_body_size 100M;
+  client_max_body_size 4G;
 
   server {
     listen 5000;
