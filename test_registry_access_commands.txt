@@ -1,13 +1,13 @@
-docker login localhost:5000 -u myusername -p mypassword
+docker login localhost:5000 -u myuser -p mypassword
 docker pull alpine
 docker tag alpine localhost:5000/alpine
 docker push localhost:5000/alpine
 
-curl -u myusername:mypassword http://localhost:5000/v2/_catalog
-curl -H "Authorization: Basic $(echo -n 'myusername:mypassword' | base64)" http://localhost:5000/v2/_catalog
+curl -u myuser:mypassword http://localhost:5000/v2/_catalog
+curl -H "Authorization: Basic $(echo -n 'myuser:mypassword' | base64)" http://localhost:5000/v2/_catalog
 
 
 "Docker Registry : https://localhost:5000"
 "Registry UI     : http://localhost:30003"
 
-curl -u myusername:mypassword -H "Origin: http://localhost:30003" -v http://localhost:5000/v2/_catalog
+curl -u myuser:mypassword -H "Origin: http://localhost:30003" -v http://localhost:5000/v2/_catalog
