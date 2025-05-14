@@ -6,7 +6,7 @@ Vagrant.configure("2") do |config|
     disk_file = File.expand_path("jenkins_data.vdi", __dir__)
     unless File.exist?(disk_file)
       require 'vagrant/util/subprocess'
-      Vagrant::Util::Subprocess.execute("VBoxManage", "createhd", "--filename", disk_file, "--size", "10240")
+      Vagrant::Util::Subprocess.execute("VBoxManage", "createhd", "--filename", disk_file, "--size", "20480")
     end
 
     jenkins.vm.network "forwarded_port", guest: 8080, host: 18080   # Jenkins
@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
       vb.cpus = 2
       vb.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 1,
                     "--device", 0, "--type", "hdd", "--medium", disk_file]
-      vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]	
+      vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
     end
 
     jenkins.vm.provision "shell", inline: <<-SHELL
@@ -52,7 +52,7 @@ Vagrant.configure("2") do |config|
 
       # Download Jenkins CLI
       wget http://localhost:8080/jnlpJars/jenkins-cli.jar -P /tmp
- 
+
       # Install Terraform (v1.6.6)
       TERRAFORM_VERSION="1.11.4"
       wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
       sudo mv terraform /usr/local/bin/
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
-      ## Install kubectl 
+      ## Install kubectl
       # This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
       # Create the keyring directory
       sudo mkdir -p /etc/apt/keyrings
@@ -85,7 +85,7 @@ Vagrant.configure("2") do |config|
       KIND_VERSION="v0.27.0"  # Change this to the latest if needed
       curl -Lo kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
       chmod +x kind
-      sudo mv kind /usr/local/bin/kind  
+      sudo mv kind /usr/local/bin/kind
 
       # Install Docker CE on Ubuntu 22.04
       sudo apt-get update -y
@@ -101,8 +101,6 @@ Vagrant.configure("2") do |config|
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o docker.gpg
       sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg docker.gpg
       rm docker.gpg
-
-
       sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
       # Add Docker repository
@@ -128,12 +126,12 @@ Vagrant.configure("2") do |config|
 
       # Granting docker privileges to jenkins user
       sudo usermod -aG docker jenkins
-      
+
       # Optional: restart shell for group change to apply (only works inside interactive shell)
       # exec sg docker newgrp `id -gn`
 
       # Enable and start Docker service (ensure it's running)
-      sudo systemctl enable docker  
+      sudo systemctl enable docker
       sudo systemctl start docker
       sudo systemctl restart jenkins
 
@@ -143,7 +141,7 @@ Vagrant.configure("2") do |config|
       echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
       sudo apt-get update -y
       sudo apt-get install -y helm
-      
+
       # Install docker compose CLi plugin
       sudo apt-get install -y docker-compose-plugin
       DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
@@ -175,7 +173,7 @@ Vagrant.configure("2") do |config|
       echo "=============================="
 
       sudo reboot
-  
+
     SHELL
   end
 end
