@@ -82,7 +82,6 @@ pipeline {
                             docker pull ${FRONTEND_IMAGE}
                             docker pull ${BACKEND_IMAGE}
 
-
                             kubectl create ns online-store-test
                             kubectl create secret docker-registry regcred \
                               --docker-server=${REGISTRY_URL} \
