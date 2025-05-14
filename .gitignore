@@ -8,4 +8,5 @@ terraform.tfstate*
 *.vdi
 *.box
 **/*.box
+.idea/*
 
