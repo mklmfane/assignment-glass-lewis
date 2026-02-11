@@ -39,7 +39,7 @@ router.patch("/:id", async (req, res) => {
     if (req.body.description) {
       todo.description = req.body.description;
     }
-    if (req.body.is_complete) {
+    if (typeof req.body.is_complete !== "undefined") {
       todo.is_complete = req.body.is_complete;
     }
     if (req.body.due_date) {
